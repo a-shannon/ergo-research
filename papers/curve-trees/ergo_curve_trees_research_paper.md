@@ -33,7 +33,9 @@ Curve Trees utilize Generalized Bulletproofs—an extension of Inner Product Arg
 
 With the deployment of Ergo Node v6.0 (EIP-0050) [3], ErgoScript gained the `UnsignedBigInt` operational type, fundamentally decoupling arithmetic from the constraints of 64-bit integer overflows. This introduced modular arithmetic opcodes (`plusMod`, `subtractMod`, `multiplyMod`, and `modInverse`) that evaluate in $O(1)$ time strictly within Ergo's *JitCost accounting model*, despite their underlying arbitrary-precision computational complexity.
 
-Because $p_{secq} = n_{secp}$, we can execute point arithmetic for the $\mathcal{E}_2$ curve entirely within ErgoScript's `UnsignedBigInt` context by parameterizing the modulus to `CryptoConstants.groupOrder`.
+Because $p_{secq} = n_{secp}$, we can execute point arithmetic for the $\mathcal{E}_2$ curve entirely within ErgoScript's `UnsignedBigInt` context by parameterizing the modulus to `CryptoConstants.groupOrder`.[^1]
+
+[^1]: `CryptoConstants.groupOrder` is exposed in ErgoScript 6.0 as a built-in constant of type `UnsignedBigInt`, accessible without explicit import. If future node versions restrict its availability, the 256-bit prime $n_{secp}$ = `0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141` can be hardcoded as a literal.
 
 ### 3.1 Point Addition Formulation
 Given two distinct affine points $P = (x_1, y_1)$ and $Q = (x_2, y_2)$ on $\mathcal{E}_2$, the point addition $R = P + Q$ is computed natively on L1 via:
@@ -54,10 +56,12 @@ $$ y_3 \equiv \lambda \cdot (x_1 - x_3) - y_1 \pmod{p_{secq}} $$
 ### 3.3 The eUTXO Affine Anomaly
 In standard elliptic curve cryptography (and EVM precompiles), evaluating internal scalar multiplication loops using Affine coordinates $(x, y)$ is considered highly inefficient because calculating the modular inverse ($x^{-1}$) consumes $\approx 80\times$ more CPU cycles than a standard multiplication. Standard practice utilizes Jacobian or Projective coordinates $(X, Y, Z)$ to delay the inversion until the final step.
 
-However, Ergo's JIT compiler prices `UnsignedBigInt` operations in a way that creates a stark architectural anomaly:
+However, Ergo's JIT compiler prices `UnsignedBigInt` operations in a way that creates a stark architectural anomaly[^2]:
 * `modInverse` = 150 JitCost
 * `multiplyMod` = 40 JitCost
 * `plusMod` / `subtractMod` = 30 JitCost
+
+[^2]: These costs are derived from the EIP-0050 specification. Empirical validation on Ergo testnet v6.0.1 is underway; if measured costs diverge from the specification, the pipeline length estimates in §3.4 and §4.2 would shift proportionally.
 
 Evaluating the Affine point addition formulated above requires $150 + 3(40) + 6(30) =$ **450 JitCost**. Conversely, executing a standard Jacobian point addition requires approximately $12$ multiplications and $7$ additions/subtractions, yielding $\approx$ **690 JitCost**. 
 
@@ -68,7 +72,7 @@ Based on this empirical baseline, evaluating a complete 256-bit scalar multiplic
 
 Verifying a Curve Tree of depth $d=20$ (capable of supporting $2^{20} \approx 1,000,000$ leaves) produces an arithmetic circuit of $\approx 8,192$ constraints. The Bulletproof verifier performs $\lceil \log_2(n) \rceil$ recursive IPA rounds to fold the proof, but the dominant verification cost arises from the final $\mathcal{O}(n)$ Multi-Scalar Multiplication used to evaluate the polynomial identity against the full set of generators [1, 2]. Evaluating this MSM sequentially over the simulated $\mathcal{E}_2$ curve equals roughly **1.2 Billion JitCost**.
 
-While optimized algorithms like Pippenger's bucket method yield $O(N / \log N)$ complexity, ErgoScript's purely functional `Coll` collections lack the mutable arrays required to execute dynamic bucket-sorting efficiently. The functional overhead of simulating Pippenger's algorithm neutralizes its theoretical speedup. Therefore, the pipeline must assume linear verification complexity, shattering Ergo's theoretical block limit of $1,000,000$ JitCost by three orders of magnitude.
+While optimized algorithms like Pippenger's bucket method yield $O(N / \log N)$ complexity, ErgoScript's purely functional `Coll` collections lack the mutable arrays required to execute dynamic bucket-sorting efficiently. Specifically, functional simulation of Pippenger bucket sorting introduces $O(N \cdot \log N)$ `Coll` reallocation overhead — each bucket operation requires copying the entire collection — estimated at $3\text{-}5\times$ the theoretical speedup, netting no practical gain on-chain. Therefore, the pipeline must assume linear verification complexity, shattering Ergo's theoretical block limit of $1,000,000$ JitCost by three orders of magnitude.
 
 ## 4. Execution Pipelining: The eUTXO Turing Tape
 To resolve this computational ceiling without deferring to Optimistic Rollup architectures (which introduce Game Theoretic assumptions, collateral bonds, and arbitrary Challenge Periods), we propose **Execution Pipelining**.
@@ -82,7 +86,7 @@ Critically, these generators are *fixed public parameters* of the circuit—not 
 
 The actual Bulletproof proof transcript submitted by a prover consists only of $\approx \lceil \log_2(n) \rceil$ curve points $(L_i, R_i)$ and a small number of scalars—totaling $\approx 1\text{-}2 \text{ KB}$, which fits natively inside a single Ergo transaction's registers.
 
-During pipelined execution, each $Tx_k$ utilizes Ergo's `CONTEXT.dataInputs` to provide Merkle inclusion proofs for the specific subset of fixed generators needed for that block's mathematical chunk from the global Genesis AVL Tree. The smart contract dynamically computes the required Fiat-Shamir challenge scalars on-the-fly from the proof transcript stored in the registers.
+During pipelined execution, each $Tx_k$ utilizes Ergo's `CONTEXT.dataInputs` to provide Merkle inclusion proofs for the specific subset of fixed generators needed for that block's mathematical chunk from the global Genesis AVL Tree. The smart contract dynamically computes the required Fiat-Shamir challenge scalars on-the-fly from the proof transcript stored in the registers. Note that AVL Tree Merkle proof verification itself consumes non-trivial JitCost per lookup; the per-block budget of $\sim 900{,}000$ JitCost must therefore account for both MSM computation *and* proof verification overhead, which may reduce the effective chunk size by an estimated $5\text{-}10\%$.
 
 ### 4.2 Deterministic State Continuation
 Because an eUTXO allows a smart contract to preserve its operational state into the subsequent output's registers, we segment the $1.2 \times 10^9$ JitCost MSM execution into $N \approx 1,200$ discrete transactions.
@@ -109,7 +113,7 @@ Ergo miners, processing this topological directed acyclic graph (DAG) of the eUT
 ### 4.4 Architectural Ramifications
 While the total state transition ($Tx_{1200}$) will necessitate approximately 24 to 40 hours to achieve absolute cryptographic finality, Ergo's pending Sub-blocks protocol upgrade provides a transformative User Experience (UX) vector. 
 
-As Sub-blocks generate Weak Confirmations on scales of $\approx 1$ second, the client UI provides deterministic, granular feedback as each $Tx_k$ enters a sub-block. This proves instantly that the heavy zero-knowledge accumulator state transition is securely in deterministic motion, mirroring Web2 latencies natively on L1.
+As Sub-blocks generate Weak Confirmations on scales of $\approx 1$ second, the client UI provides deterministic, granular feedback as each $Tx_k$ enters a sub-block. This proves instantly that the heavy zero-knowledge accumulator state transition is securely in deterministic motion, mirroring Web2 latencies natively on L1. We emphasize that Sub-blocks reduce *perceived* latency (user-facing confirmation feedback) but do not alter the cryptographic finality time of the full pipeline. Until the Sub-blocks upgrade is deployed, the $\approx 40$-hour finality window is an irreducible operational constraint.
 
 ## 5. Related Work
 Contemporary blockchains approach recursive proof compositions through varied architectures. Zcash employs the Halo 2 protocol over the Pasta cycle (Pallas and Vesta) natively at the protocol layer, requiring specific cryptographic parameters embedded into consensus. Mina utilizes a recursive SNARK structure (Pickles) operating on specialized curves to maintain a constant-size blockchain. In contrast, our proposed architecture requires *zero protocol-level modifications*, achieving similar highly scalable zero-knowledge accumulators purely via smart contract algorithmic simulation and the native eUTXO topology.
@@ -117,7 +121,7 @@ Contemporary blockchains approach recursive proof compositions through varied ar
 ## 6. Conclusion and Future Work
 By uniting the efficient Generalized Bulletproofs arithmetic scheme, the 2-chain completion via the `secq256k1` `UnsignedBigInt` simulation, and the topological properties of eUTXO Execution Pipelining, Ergo L1 is mathematically equipped to support massive-scale Zero-Knowledge Accumulators today. 
 
-However, this architecture presents distinct operational limitations. The reliance on sequential multi-block execution introduces latency constraints ($\approx 40$ hours for full finality). Future work must analyze fee market dynamics under extreme network congestion, nullifier state-machine topologies for specific privacy pool implementations, and the interaction of Execution Pipelining with Ergo's pending Sub-blocks upgrade. Nonetheless, this theoretical reality is achievable cleanly at the current smart-contract layer without any prerequisite soft forks or core protocol mutations.
+However, this architecture presents distinct operational limitations. The reliance on sequential multi-block execution introduces latency constraints ($\approx 40$ hours for full finality). Future work must analyze fee market dynamics under extreme network congestion, nullifier state-machine topologies for specific privacy pool implementations, and the interaction of Execution Pipelining with Ergo's pending Sub-blocks upgrade. Additionally, empirical benchmarking of `UnsignedBigInt` opcode costs on testnet infrastructure would refine the pipeline length estimates presented in §3.4. Nonetheless, this theoretical reality is achievable cleanly at the current smart-contract layer without any prerequisite soft forks or core protocol mutations.
 
 ## References
 
