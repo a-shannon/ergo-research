@@ -10,6 +10,10 @@ Open-source research papers on scaling zero-knowledge proofs, privacy protocols,
 |---|-------|------|-----|
 | 1 | **Scaling Zero-Knowledge Proofs on Ergo: Native secq256k1 Simulation and eUTXO Pipelining for Curve Trees** | Feb 2026 | [PDF](papers/curve-trees/ergo_curve_trees_research_paper.pdf) |
 
+## Research checkpoints
+
+- [NiPoPoW V2 engineering update, 4 November 2026](papers/nipopow-v2/2026-11-04-progress.md): a real historical-data POINT+HEADER join, measured tests and remaining work.
+
 ## Repository Structure
 
 ```
