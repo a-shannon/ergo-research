@@ -1,0 +1,10 @@
+/target/
+/.cargo/
+/runtime/
+/artifacts/
+/temp/
+/.env
+/.env.*
+/*.log
+/*.packet
+*.rmeta

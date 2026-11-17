@@ -1,0 +1,5 @@
+# Third-party components
+
+`vendor/dory/` contains `dory-pcs` 0.4.2 and its derive crate from [a16z/dory](https://github.com/a16z/dory), tag [`v0.4.2`](https://github.com/a16z/dory/tree/v0.4.2) (`5246da503c3e2c6baa40ec00d714987c73a3e6eb`). The package declares `Apache-2.0 OR MIT`. Its license texts are retained as [LICENSE-APACHE](vendor/dory/LICENSE-APACHE) and [LICENSE-MIT](vendor/dory/LICENSE-MIT). The crate remains a local path dependency so the preview builds against the included source.
+
+`vendor/header-core/` is the prototype's Rust codec for canonical Ergo header bytes. Its consensus reference is [Ergo commit `8995ff243b140e7fe716bd3204423dd35690c2e4`](https://github.com/ergoplatform/ergo/tree/8995ff243b140e7fe716bd3204423dd35690c2e4); the reference repository publishes its material under [CC0-1.0](https://github.com/ergoplatform/ergo/blob/8995ff243b140e7fe716bd3204423dd35690c2e4/LICENSE). The preview does not yet specify a license for the project-authored Rust implementation. Obtain the author's terms before reusing that code outside technical review.

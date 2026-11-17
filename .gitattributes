@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.bin binary
+*.np37 binary
+*.vk binary
+*.packet binary
+*.pdf binary

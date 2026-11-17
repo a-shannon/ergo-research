@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "family": "four-private-consecutive-headers-decoded-carry-one-gkr-one-pcs-v2",
+  "profile": "four-header-link-decoded-carry-log22-row24-v2",
+  "start_hex": "015f32f7b2f5b8cf5e42db44370a9e7969e48bf8099cea52f69ff3bac8eae968",
+  "tip_hex": "ed7ef876a4511eb20de14c7b433f6486bf83611376d49d6c4691cfd0b68ff3ea",
+  "input_log": 22,
+  "row_log": 24,
+  "slot_log": 2,
+  "base_row_log": 20,
+  "family_log": 2,
+  "member_row_bits": [
+    9,
+    19,
+    20,
+    20
+  ],
+  "adjacency_terms": 1280,
+  "boundary_terms": 1889356,
+  "core_terms": 5519360,
+  "carry_height_terms": 12072,
+  "fixed_heights": [
+    3072,
+    3073,
+    3074,
+    3075
+  ],
+  "carry_edge": [
+    1,
+    2
+  ],
+  "total_terms": 7422068,
+  "descriptor_hex": "1af1f43c1f011d26e7dba190654244cd10910c2adc659d3e8f452b07d48a2808",
+  "setup_id_hex": "94f67a7bd4490c3c563a7e421b4dbfdbe88cc09d090bb85d9ac8226337b73955",
+  "commitment_hex": "0fe54b5ac51eff591bef0f752c15a7be74d7da8ae8e936ff8ae72f24cca37d205cc6b789879f037a1c3f12ff2a7dd658a57a5b77c30e51e3bfda50be6fe64f2161b8cf5b993113e9c2f5aec5c38c82b36953493ac6472da09ad7a31e7e1d7f14cce506bdd278871d30bf686ddd5e7ef68c584042aa7ff9325269f9977423fd13994773ddb43a2fe72fba1d3dcc3c4db139fa33f303065655c288fd823a9e7d09744e33687a8cdd312dce7e2feb6bd2cbb4ba588a06099183aa426790afe2ef26c18831ab2f49ad6ba7461fff3422e648e82290d1bab4a26698b7679c378e292d378316ba75c1287ab71d9c08961102ed06e30dbc19bbe1e389ddda5cb9a42f187bb95d11626b44ab084446ae4b22a0140a1e338fcaad4da59d98a7ea793aea153d01167d94c25444723ad20b0324838d4c8026b0095ffb46f3833b5e124a252c81875afed6ccbd96ebf2ec9bbfa1dfb30e9d0a2758254d8a68fb5a8d556ab12f510329c751e34cb072459d67aed8eed0505f901491aa7569d16e0dfcdf130001"
+}
