@@ -1,0 +1,64 @@
+name: NiPoPoW contributor build
+
+on:
+  push:
+    branches:
+      - a-shannon/nipopow-v2-community-roles
+    paths:
+      - 'community-roles/source/**'
+      - 'community-roles/public/**'
+      - 'community-roles/*.py'
+      - 'community-roles/SOURCE-MANIFEST.tsv'
+      - '.gitattributes'
+      - '.github/workflows/nipopow-community-roles.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.event.repository.private == false
+    runs-on: windows-2025
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Build and check the detached role commands
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:RUSTUP_TOOLCHAIN = '1.97.1-x86_64-pc-windows-msvc'
+          rustup toolchain install $env:RUSTUP_TOOLCHAIN --profile minimal
+          if ($LASTEXITCODE -ne 0) { throw 'Rust toolchain installation failed' }
+
+          $work = Join-Path $env:RUNNER_TEMP 'nipopow-contributor'
+          $exe = python -I -B community-roles/contribute.py build --work $work
+          if ($LASTEXITCODE -ne 0 -or @($exe).Count -ne 1 -or !(Test-Path -LiteralPath $exe -PathType Leaf)) {
+            throw 'Contributor build did not return a test executable'
+          }
+
+          $prefix = 'historical_prefix_proof::full_certificate::'
+          $commands = @(
+            'produce_detached_n0_tree_role', 'verify_detached_n0_tree_role',
+            'produce_detached_n0_height_daa_role', 'verify_detached_n0_height_daa_role'
+          )
+          foreach ($command in $commands) {
+            $name = $prefix + $command
+            $listing = & $exe $name --exact --list
+            if ($LASTEXITCODE -ne 0 -or @($listing -ceq ($name + ': test')).Count -ne 1) {
+              throw "Missing native command $name"
+            }
+            Write-Output $name
+          }
+
+          $test = 'historical_prefix_proof::h21_atomic_seven::full_structural::detached_role::community_claim_is_checked_on_the_local_packed_witness'
+          $output = & $exe $test --exact --test-threads=1
+          if ($LASTEXITCODE -ne 0 -or !($output -cmatch '^test result: ok\. 1 passed; 0 failed; 0 ignored;')) {
+            throw 'Local witness claim check failed or did not run'
+          }
+          $output

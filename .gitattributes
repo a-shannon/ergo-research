@@ -1,0 +1,4 @@
+community-roles/source/** -text
+community-roles/public/** -text
+community-roles/SOURCE-MANIFEST.tsv -text
+community-roles/*.py -text

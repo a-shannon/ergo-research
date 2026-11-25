@@ -1,0 +1,9 @@
+[package]
+name = "nipopow-r4-audit-coordinates"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+num-bigint = "=0.4.8"
+sha2 = "=0.10.9"

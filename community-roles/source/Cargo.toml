@@ -1,0 +1,31 @@
+[package]
+name = "nipopow-gkr-dory-prototype"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+h21-snapshot-n0 = []
+
+[dependencies]
+nipopow-r4-audit-coordinates = { path = "vendor/r4-audit-coordinates" }
+ark-bn254 = "=0.5.0"
+ark-ec = "=0.5.0"
+ark-ff = "=0.5.0"
+ark-serialize = { version = "=0.5.0", features = ["derive"] }
+ark-std = "=0.5.0"
+blake2 = "=0.10.6"
+k256 = { version = "=0.13.4", default-features = false, features = ["arithmetic"] }
+num-bigint = "=0.4.8"
+num-traits = "=0.2.19"
+rand_core = "=0.6.4"
+rayon = "=1.12.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dory-pcs = { path = "vendor/dory", default-features = false, features = ["arkworks", "parallel"] }
+ergo-header-core = { path = "vendor/header-core" }
+
+[dev-dependencies]
+
+[profile.release]
+overflow-checks = true
